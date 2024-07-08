@@ -1,56 +1,52 @@
 <?php
-/**
- * Plugin Name: 10posts
- * Description: Simple 10 posts for any page
- * Version: 1.0.0
- * Author: WTERH
- */
+/*
+Plugin Name: Recent Posts Plugin
+Description: Displays the latest 10 posts using a shortcode and logs errors.
+Version: 1.0
+Author: Your Name
+*/
 
-// Смотрим, есть ли аналогичный шорт
-if (!function_exists('wt10posts')) {
-
-    function wt10posts()
-    {
-        $output = '';
-
-        // Назначаем путь для логов и ошибок
-        $error_log_file = WP_CONTENT_DIR . '/wt10posts-error.log';
-
-        try {
-            // Получаем последние 10 постов
-            $args = array(
-                'posts_per_page' => 10,
-                'orderby'        => 'date',
-                'order'          => 'DESC',
-                'post_type'      => 'post',
-                'post_status'    => 'publish',
-            );
-
-            // Делаем запрос
-            $latest_posts = new WP_Query($args);
-            // Обрабатываем запрос и создаем 10-ок ссылок на посты
-            if ($latest_posts->have_posts()) {
-                while ($latest_posts->have_posts()) {
-                    $latest_posts->the_post();
-                    $output .= '<a href="' . get_permalink() . '">' . get_the_title() . '</a><br>';
-                }
-
-                // Обязательнос сбрасываем данные запроса, на случай, если не одни мы, такие "умные"
-                wp_reset_postdata();
-            } else {
-                $output = 'Нет последних постов.';
-            }
-        } catch (Exception $e) {
-            // Логируем ошибки, если такие случаются
-            error_log('wt10posts error: ' . $e->getMessage() . PHP_EOL, 3, $error_log_file);
-
-            $output = 'Произошла ошибка при получении последних постов.';
-        }
-
-        return $output;
+class wt10Plugin {
+    public function __construct() {
+        // Регистрация шорткода
+        add_shortcode('recent_posts', [$this, 'display_recent_posts']);
     }
 
-    // Регистрируцем шорт
-    add_shortcode('last10', 'wt10posts');
+    public function display_recent_posts() {
+        try {
+            // Проверка наличия постов
+            $all_posts = wp_count_posts();
+            if ($all_posts->publish == 0) {
+                throw new Exception('No posts found.');
+            }
+
+            // Получаем последние 10 постов (или меньше)
+            $recent_posts = wp_get_recent_posts([
+                'numberposts' => 10,
+                'post_status' => 'publish'
+            ]);
+
+            // Формируем HTML вывод
+            $output = '<ul>';
+            foreach ($recent_posts as $post) {
+                $output .= sprintf(
+                    '<li><a href="%s">%s</a></li>',
+                    get_permalink($post['ID']),
+                    esc_html($post['post_title'])
+                );
+            }
+            $output .= '</ul>';
+
+            return $output;
+        } catch (Exception $e) {
+            // Логирование ошибки в лог файл WordPress
+            if (function_exists('error_log')) {
+                error_log('Error displaying recent posts: ' . $e->getMessage());
+            }
+            return '<p>There was an error displaying recent posts.</p>';
+        }
+    }
 }
 
+// Инициализация плагина
+new wt10Plugin();
