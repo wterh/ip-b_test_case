@@ -1,32 +1,32 @@
 <?php
 /*
-Plugin Name: Recent Posts Plugin
-Description: Displays the latest 10 posts using a shortcode and logs errors.
+Plugin Name: wt10posts
+Description: Покажем 10-ок последних постов
 Version: 1.0
-Author: Your Name
+Author: WTERH
 */
 
-class wt10Plugin {
+class wt10posts {
     public function __construct() {
         // Регистрация шорткода
-        add_shortcode('recent_posts', [$this, 'display_recent_posts']);
+        add_shortcode('wt10post', [$this, 'wt10p']);
     }
 
-    public function display_recent_posts() {
+    public function wt10p() {
         try {
             // Проверка наличия постов
             $all_posts = wp_count_posts();
             if ($all_posts->publish == 0) {
-                throw new Exception('No posts found.');
+                throw new Exception('Постов не найдено.');
             }
 
-            // Получаем последние 10 постов (или меньше)
+            // Получаем последние 10 постов (или меньше, сколько есть)
             $recent_posts = wp_get_recent_posts([
                 'numberposts' => 10,
                 'post_status' => 'publish'
             ]);
 
-            // Формируем HTML вывод
+            // Формируем буффер для вывода, но без команды не даем
             $output = '<ul>';
             foreach ($recent_posts as $post) {
                 $output .= sprintf(
@@ -37,16 +37,17 @@ class wt10Plugin {
             }
             $output .= '</ul>';
 
+            // Возвращаем буффер, ведь требовался шорткод
             return $output;
         } catch (Exception $e) {
-            // Логирование ошибки в лог файл WordPress
+
+            // Логирование ошибок, для ВП
             if (function_exists('error_log')) {
-                error_log('Error displaying recent posts: ' . $e->getMessage());
+                error_log('Не нашлось постов :С : ' . $e->getMessage());
             }
-            return '<p>There was an error displaying recent posts.</p>';
         }
     }
 }
 
 // Инициализация плагина
-new wt10Plugin();
+new wt10posts();
